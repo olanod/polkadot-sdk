@@ -19,7 +19,6 @@
 use super::*;
 
 use sp_runtime::str_array as s;
-use sp_std::borrow::Cow;
 
 const fn percent(x: i32) -> sp_arithmetic::FixedI64 {
 	sp_arithmetic::FixedI64::from_rational(x as u128, 100)
@@ -286,10 +285,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 	type Id = u16;
 	type RuntimeOrigin = <RuntimeOrigin as frame_support::traits::OriginTrait>::PalletsOrigin;
 
-	fn tracks(
-	) -> impl Iterator<Item = Cow<'static, pallet_referenda::Track<Self::Id, Balance, BlockNumber>>>
-	{
-		TRACKS_DATA.iter().map(Cow::Borrowed)
+	fn tracks() -> pallet_referenda::TracksIterator<Self::Id, Balance, BlockNumber> {
+		TRACKS_DATA.as_slice().into()
 	}
 	fn track_for(id: &Self::RuntimeOrigin) -> Result<Self::Id, ()> {
 		if let Ok(system_origin) = frame_system::RawOrigin::try_from(id.clone()) {

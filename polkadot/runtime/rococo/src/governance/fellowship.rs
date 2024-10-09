@@ -17,12 +17,11 @@
 //! Elements of governance concerning the Rococo Fellowship.
 
 use frame_support::traits::{MapSuccess, TryMapSuccess};
-use pallet_referenda::{Track, TrackInfo};
+use pallet_referenda::{Track, TrackInfo, TracksIterator};
 use sp_runtime::{
 	str_array as s,
 	traits::{CheckedReduceBy, ConstU16, Replace, ReplaceWithDefault},
 };
-use sp_std::borrow::Cow;
 
 use super::*;
 use crate::{CENTS, DAYS};
@@ -38,7 +37,7 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 	type Id = u16;
 	type RuntimeOrigin = <RuntimeOrigin as frame_support::traits::OriginTrait>::PalletsOrigin;
 
-	fn tracks() -> impl Iterator<Item = Cow<'static, Track<Self::Id, Balance, BlockNumber>>> {
+	fn tracks() -> TracksIterator<Self::Id, Balance, BlockNumber> {
 		static DATA: [Track<u16, Balance, BlockNumber>; 10] = [
 			Track {
 				id: 0u16,
@@ -261,7 +260,7 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 				},
 			},
 		];
-		DATA.iter().map(Cow::Borrowed)
+		DATA.as_slice().into()
 	}
 	fn track_for(id: &Self::RuntimeOrigin) -> Result<Self::Id, ()> {
 		use super::origins::Origin;

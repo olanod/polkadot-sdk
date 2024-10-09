@@ -33,7 +33,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, Hash},
 	BuildStorage, DispatchResult, Perbill,
 };
-use sp_std::borrow::Cow;
+use types::TracksIterator;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -105,8 +105,8 @@ impl TracksInfo<u64, u64> for TestTracksInfo {
 	type Id = u8;
 	type RuntimeOrigin = <RuntimeOrigin as OriginTrait>::PalletsOrigin;
 
-	fn tracks() -> impl Iterator<Item = Cow<'static, Track<Self::Id, u64, u64>>> {
-		static DATA: [Track<u8, u64, u64>; 2] = [
+	fn tracks() -> TracksIterator<Self::Id, u64, u64> {
+		static DATA: [Track<u8, u64, u64>; 3] = [
 			Track {
 				id: 0u8,
 				info: TrackInfo {
@@ -174,7 +174,7 @@ impl TracksInfo<u64, u64> for TestTracksInfo {
 				},
 			},
 		];
-		DATA.iter().map(Cow::Borrowed)
+		DATA.as_slice().into()
 	}
 	fn track_for(id: &Self::RuntimeOrigin) -> Result<Self::Id, ()> {
 		if let Ok(system_origin) = frame_system::RawOrigin::try_from(id.clone()) {
