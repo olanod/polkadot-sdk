@@ -18,7 +18,6 @@
 use super::Origin;
 use crate::{Balance, BlockNumber, RuntimeOrigin, DAYS, DOLLARS, HOURS};
 use sp_runtime::{str_array as s, Perbill};
-use sp_std::borrow::Cow;
 
 /// Referendum `TrackId` type.
 pub type TrackId = u16;
@@ -48,9 +47,7 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 	type RuntimeOrigin = <RuntimeOrigin as frame_support::traits::OriginTrait>::PalletsOrigin;
 
 	/// Return the list of available tracks and their information.
-	fn tracks(
-	) -> impl Iterator<Item = Cow<'static, pallet_referenda::Track<Self::Id, Balance, BlockNumber>>>
-	{
+	fn tracks() -> pallet_referenda::TrackIterator<Self::Id, Balance, BlockNumber> {
 		static DATA: [pallet_referenda::Track<TrackId, Balance, BlockNumber>; 9] = [
 			pallet_referenda::Track {
 				id: constants::AMBASSADOR_TIER_1,
@@ -251,7 +248,7 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 				},
 			},
 		];
-		DATA.iter().map(Cow::Borrowed)
+		DATA.as_slice().into()
 	}
 
 	/// Determine the voting track for the given `origin`.

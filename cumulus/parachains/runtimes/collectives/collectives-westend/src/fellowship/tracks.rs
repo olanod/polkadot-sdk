@@ -19,7 +19,6 @@
 use crate::{Balance, BlockNumber, RuntimeOrigin, DAYS, DOLLARS, HOURS, MINUTES};
 use pallet_ranked_collective::Rank;
 use sp_runtime::{str_array as s, traits::Convert, Perbill};
-use sp_std::borrow::Cow;
 
 /// Referendum `TrackId` type.
 pub type TrackId = u16;
@@ -116,9 +115,7 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 	type Id = TrackId;
 	type RuntimeOrigin = <RuntimeOrigin as frame_support::traits::OriginTrait>::PalletsOrigin;
 
-	fn tracks(
-	) -> impl Iterator<Item = Cow<'static, pallet_referenda::Track<Self::Id, Balance, BlockNumber>>>
-	{
+	fn tracks() -> pallet_referenda::TracksIterator<Self::Id, Balance, BlockNumber> {
 		use constants as tracks;
 		static DATA: [pallet_referenda::Track<TrackId, Balance, BlockNumber>; 21] = [
 			pallet_referenda::Track {
@@ -488,7 +485,7 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 				},
 			},
 		];
-		DATA.iter().map(Cow::Borrowed)
+		DATA.as_slice().into()
 	}
 	fn track_for(id: &Self::RuntimeOrigin) -> Result<Self::Id, ()> {
 		use super::origins::Origin;

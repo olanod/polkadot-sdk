@@ -146,6 +146,50 @@ pub struct Track<Id, Balance, Moment, const N: usize = DEFAULT_MAX_TRACK_NAME_LE
 	pub info: TrackInfo<Balance, Moment, N>,
 }
 
+pub struct TracksIterator<I, B, M, const N: usize = DEFAULT_MAX_TRACK_NAME_LEN>(
+	Box<dyn Iterator<Item = Cow<'static, Track<I, B, M, N>>>>,
+)
+where
+	I: Clone + 'static,
+	B: Clone + 'static,
+	M: Clone + 'static;
+
+impl<I, B, M, const N: usize> TracksIterator<I, B, M, N>
+where
+	I: Clone + 'static,
+	B: Clone + 'static,
+	M: Clone + 'static,
+{
+	pub fn new(it: impl Iterator<Item = (I, TrackInfo<B, M, N>)> + 'static) -> Self {
+		let it = it.map(|(id, info)| Cow::Owned(Track { id, info }));
+		Self(Box::new(it))
+	}
+}
+
+impl<I, B, M, const N: usize> Iterator for TracksIterator<I, B, M, N>
+where
+	I: Clone + 'static,
+	B: Clone + 'static,
+	M: Clone + 'static,
+{
+	type Item = Cow<'static, Track<I, B, M, N>>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.0.next()
+	}
+}
+
+impl<I, B, M, const N: usize> From<&'static [Track<I, B, M, N>]> for TracksIterator<I, B, M, N>
+where
+	I: Clone + 'static,
+	B: Clone + 'static,
+	M: Clone + 'static,
+{
+	fn from(it: &'static [Track<I, B, M, N>]) -> Self {
+		Self(Box::new(it.iter().map(Cow::Borrowed)))
+	}
+}
+
 /// Information on the voting tracks.
 pub trait TracksInfo<Balance, Moment, const N: usize = DEFAULT_MAX_TRACK_NAME_LEN>
 where
@@ -162,7 +206,7 @@ where
 	///
 	/// The iterator MUST be sorted by `Id`. Consumers of this trait are advised to assert
 	/// [`Self::check_integrity`] prior to any use.
-	fn tracks() -> impl Iterator<Item = Cow<'static, Track<Self::Id, Balance, Moment, N>>>;
+	fn tracks() -> TracksIterator<Self::Id, Balance, Moment, N>;
 
 	/// Determine the voting track for the given `origin`.
 	fn track_for(origin: &Self::RuntimeOrigin) -> Result<Self::Id, ()>;
@@ -727,7 +771,7 @@ mod tests {
 		impl TracksInfo<u64, u64> for BadTracksInfo {
 			type Id = u8;
 			type RuntimeOrigin = <RuntimeOrigin as OriginTrait>::PalletsOrigin;
-			fn tracks() -> impl Iterator<Item = Cow<'static, Track<Self::Id, u64, u64>>> {
+			fn tracks() -> TracksIterator<Self::Id, u64, u64> {
 				static DATA: [Track<u8, u64, u64>; 2] = [
 					Track {
 						id: 1u8,
@@ -774,7 +818,7 @@ mod tests {
 						},
 					},
 				];
-				DATA.iter().map(Cow::Borrowed)
+				DATA.as_slice().into()
 			}
 			fn track_for(_: &Self::RuntimeOrigin) -> Result<Self::Id, ()> {
 				unimplemented!()
