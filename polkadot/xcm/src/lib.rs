@@ -1,12 +1,12 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
 // This file is part of Polkadot.
 
-// Substrate is free software: you can redistribute it and/or modify
+// Polkadot is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Substrate is distributed in the hope that it will be useful,
+// Polkadot is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
@@ -21,13 +21,18 @@
 //
 // Hence, `no_std` rather than sp-runtime.
 #![cfg_attr(not(feature = "std"), no_std)]
+// Because of XCMv2.
+#![allow(deprecated)]
 
 extern crate alloc;
 
+use codec::{Decode, DecodeLimit, Encode, Error as CodecError, Input, MaxEncodedLen};
 use derivative::Derivative;
-use parity_scale_codec::{Decode, DecodeLimit, Encode, Error as CodecError, Input, MaxEncodedLen};
 use scale_info::TypeInfo;
 
+#[deprecated(
+	note = "XCMv2 will be removed once XCMv5 is released. Please use XCMv3 or XCMv4 instead."
+)]
 pub mod v2;
 pub mod v3;
 pub mod v4;
@@ -425,6 +430,7 @@ pub type VersionedMultiAssets = VersionedAssets;
 #[scale_info(replace_segment("staging_xcm", "xcm"))]
 pub enum VersionedXcm<RuntimeCall> {
 	#[codec(index = 2)]
+	#[deprecated]
 	V2(v2::Xcm<RuntimeCall>),
 	#[codec(index = 3)]
 	V3(v3::Xcm<RuntimeCall>),

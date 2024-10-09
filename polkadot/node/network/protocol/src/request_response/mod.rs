@@ -51,8 +51,8 @@
 
 use std::{collections::HashMap, time::Duration, u64};
 
-use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
-use sc_network::NetworkBackend;
+use polkadot_primitives::MAX_CODE_SIZE;
+use sc_network::{NetworkBackend, MAX_RESPONSE_SIZE};
 use sp_runtime::traits::Block;
 use strum::{EnumIter, IntoEnumIterator};
 
@@ -98,6 +98,10 @@ pub enum Protocol {
 	/// Protocol for requesting candidates with attestations in statement distribution
 	/// when async backing is enabled.
 	AttestedCandidateV2,
+
+	/// Protocol for chunk fetching version 2, used by availability distribution and availability
+	/// recovery.
+	ChunkFetchingV2,
 }
 
 /// Minimum bandwidth we expect for validators - 500Mbit/s is the recommendation, so approximately
@@ -155,11 +159,8 @@ pub const MAX_PARALLEL_ATTESTED_CANDIDATE_REQUESTS: u32 = 5;
 
 /// Response size limit for responses of POV like data.
 ///
-/// This is larger than `MAX_POV_SIZE` to account for protocol overhead and for additional data in
-/// `CollationFetchingV1` or `AvailableDataFetchingV1` for example. We try to err on larger limits
-/// here as a too large limit only allows an attacker to waste our bandwidth some more, a too low
-/// limit might have more severe effects.
-const POV_RESPONSE_SIZE: u64 = MAX_POV_SIZE as u64 + 10_000;
+/// Same as what we use in substrate networking.
+const POV_RESPONSE_SIZE: u64 = MAX_RESPONSE_SIZE;
 
 /// Maximum response sizes for `StatementFetchingV1`.
 ///
@@ -209,11 +210,11 @@ impl Protocol {
 		let name = req_protocol_names.get_name(self);
 		let legacy_names = self.get_legacy_name().into_iter().map(Into::into).collect();
 		match self {
-			Protocol::ChunkFetchingV1 => N::request_response_config(
+			Protocol::ChunkFetchingV1 | Protocol::ChunkFetchingV2 => N::request_response_config(
 				name,
 				legacy_names,
 				1_000,
-				POV_RESPONSE_SIZE as u64 * 3,
+				POV_RESPONSE_SIZE,
 				// We are connected to all validators:
 				CHUNK_REQUEST_TIMEOUT,
 				tx,
@@ -292,7 +293,7 @@ impl Protocol {
 			// times (due to network delays), 100 seems big enough to accommodate for "bursts",
 			// assuming we can service requests relatively quickly, which would need to be measured
 			// as well.
-			Protocol::ChunkFetchingV1 => 100,
+			Protocol::ChunkFetchingV1 | Protocol::ChunkFetchingV2 => 100,
 			// 10 seems reasonable, considering group sizes of max 10 validators.
 			Protocol::CollationFetchingV1 | Protocol::CollationFetchingV2 => 10,
 			// 10 seems reasonable, considering group sizes of max 10 validators.
@@ -362,6 +363,7 @@ impl Protocol {
 			// Introduced after legacy names became legacy.
 			Protocol::AttestedCandidateV2 => None,
 			Protocol::CollationFetchingV2 => None,
+			Protocol::ChunkFetchingV2 => None,
 		}
 	}
 }
@@ -412,6 +414,7 @@ impl ReqProtocolNames {
 		};
 
 		let short_name = match protocol {
+			// V1:
 			Protocol::ChunkFetchingV1 => "/req_chunk/1",
 			Protocol::CollationFetchingV1 => "/req_collation/1",
 			Protocol::PoVFetchingV1 => "/req_pov/1",
@@ -419,8 +422,10 @@ impl ReqProtocolNames {
 			Protocol::StatementFetchingV1 => "/req_statement/1",
 			Protocol::DisputeSendingV1 => "/send_dispute/1",
 
+			// V2:
 			Protocol::CollationFetchingV2 => "/req_collation/2",
 			Protocol::AttestedCandidateV2 => "/req_attested_candidate/2",
+			Protocol::ChunkFetchingV2 => "/req_chunk/2",
 		};
 
 		format!("{}{}", prefix, short_name).into()
